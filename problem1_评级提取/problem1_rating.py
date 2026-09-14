@@ -47,12 +47,15 @@ ACTION_WORDS = ["维持", "继续", "仍维持", "重申", "上调", "下调",
 # 兜底句式（文本中无有效“评级”锚点时）：维持/继续/重申 + 评级词
 # 增持单独处理：排除股东增持（增持股份/至XX%等）
 FALLBACK_PATTERNS = [
-    re.compile(r"(维持|继续|仍维持|重申)[“”\"']*(?P<r>强烈推荐|审慎推荐|谨慎推荐|推荐|买入|中性|持有|减持|卖出|回避|观望)"),
+    # 排除“继续推荐机构投资者‘买入’”——此处“推荐”是动词，真实评级在后文
+    re.compile(r"(维持|继续|仍维持|重申)[“”\"']*(?P<r>强烈推荐|审慎推荐|谨慎推荐|推荐|买入|中性|持有|减持|卖出|回避|观望)(?!机构|投资者|客户|给)"),
     re.compile(r"(维持|继续|仍维持|重申)[“”\"']*(?P<r>增持)(?!至|股份|计划|比例|了|约|达|超|数|万股)"),
     # “强推”是“强烈推荐”的缩写（如“维持强推评级”“继续强推——水井坊”），排除“强推广/强推品种”等非评级用法
     re.compile(r"(维持|继续|仍维持|重申|给定|给予)[“”\"']*(?P<r>强推)(?!广|品种|渠道)"),
     # “给予X”但后面没有“评级”（如“首次给予“推荐”。”“给予“买入”的投资建议”）
     re.compile(r"(继续给予|再次给予|首次给予|给予|给与|给以)[“”\"'\s]*(?P<r>" + RATING_SRC + r")(?!逻辑|顺序|机会|时点|股份)"),
+    # “继续推荐机构投资者‘买入’”：推荐/建议 + 机构/投资者 时，推荐是动词，真实评级在其后
+    re.compile(r"(?P<a>继续|维持|重申|仍然)?(?:推荐|建议)(?:机构|投资者|客户)+[“”\"'\s]*(?P<r>" + RATING_SRC + r")"),
 ]
 
 # 文中明确“未给出评级”的句式（暂不给予评级 / 暂无投资评级 / 无投资评级 / 未有评级 等）
@@ -125,14 +128,20 @@ def find_candidates(text: str, company: str):
             continue
 
         # 句式1：评级之后出现“至/到/为 + X”（下调评级至中性-B / 下调评级到“增持” / 评级由买入下调为持有）
-        mm = re.search(r"(?:至|到|为)\s*[“”\"'\s]*(?P<r>" + RATING_SRC + r")(?!逻辑|顺序)", after_long)
+        # “为”需排除“原为/认为/作为/成为/因为/视为”等非评级变动用法，
+        # 否则“下调至“中性”评级（原为“买入”）”会把被替换掉的旧评级当成新评级
+        mm = re.search(
+            r"(?:至|到|(?<![原认作成因以视称定行变更尤极较甚本])为)\s*[“”\"'\s]*(?P<r>" + RATING_SRC + r")(?!逻辑|顺序)",
+            after_long)
         if mm and not _is_scale_description(after_long[mm.end():]):
             r = mm.group("r")
             pos = s + 2 + mm.start()
             act = _detect_action(text[max(0, s - 25):s]) or "调整"
             ev = text[max(0, pos - 25):pos + len(r) + 12]
             cands.append((r, act, pos, "至-句式", ev, _bonus_for_company(company, text, pos)))
-            continue
+            # 注意：此处不能 continue，同一锚点还要让“锚点前句式”也产出候选，
+            # 否则“给予‘买入’评级，继续强烈推荐”会只剩错误的“推荐”候选，
+            # 优先级打分无从比较（曾导致误判）。孰优由 METHOD_PRIORITY 裁决。
 
         # 句式2：评级之后紧跟“：/为/仍为/动作词 + 评级词”（评级：买入 / 评级仍为买入）
         mm = re.match(
@@ -141,23 +150,27 @@ def find_candidates(text: str, company: str):
         if mm and not _is_scale_description(after[mm.end():]):
             r = mm.group("r")
             pos = s + 2 + mm.start()
-            act = _detect_action(text[max(0, s - 25):s]) or _detect_action(after[:mm.start()])
+            # 动作词优先取锚点与评级词之间（“评级继续推荐”→继续），
+            # 而非锚点之前（“给予‘买入’评级，继续推荐”→不应取“给予”）
+            act = _detect_action(after[:mm.start()]) or _detect_action(text[max(0, s - 25):s])
             ev = text[max(0, pos - 25):pos + len(r) + 12]
             cands.append((r, act, pos, "锚点后句式", ev, _bonus_for_company(company, text, pos)))
-            continue
+            # 同上，不能 continue，需让“锚点前句式”也能产出候选
 
         # 句式3：评级词位于锚点之前（维持“买入”评级 / 买入-A 的投资评级）
-        matches = list(RATING_TERM.finditer(before))
-        if matches:
-            last = matches[-1]
-            between = before[last.end():]
+        # 注意：窗口内**所有**评级词都要产出候选，不能只取最后一个——
+        # “维持对中行A 股谨慎买入和H 股买入评级不变”里，只取最后一个会丢掉
+        # A 股的“谨慎买入”，导致误取 H 股档位。孰优由打分裁决。
+        before_start = max(0, s - 30)
+        for mm3 in RATING_TERM.finditer(before):
             # 评级词与锚点之间不能有句号/分号/换行（跨句无效）
-            if not re.search(r"[。；\n]", between):
-                r = last.group(0)
-                pos = s - 30 + last.start()
-                act = _detect_action(before[max(0, last.start() - 25):last.start()])
-                ev = text[max(0, pos - 25):pos + len(r) + 12]
-                cands.append((r, act, pos, "锚点前句式", ev, _bonus_for_company(company, text, pos)))
+            if re.search(r"[。；\n]", before[mm3.end():]):
+                continue
+            r = mm3.group(0)
+            pos = before_start + mm3.start()
+            act = _detect_action(before[max(0, mm3.start() - 25):mm3.start()])
+            ev = text[max(0, pos - 25):pos + len(r) + 12]
+            cands.append((r, act, pos, "锚点前句式", ev, _bonus_for_company(company, text, pos)))
 
     # 句式4：全文扫描“加入X名单”（如“我们将其加入买入名单”）
     for m in re.finditer(r"加入[“”\"']*(?P<r>" + RATING_SRC + r")(?!逻辑|顺序)名单", text):
@@ -201,13 +214,52 @@ def find_fallback(text: str, company: str):
     return cands
 
 
+# 句式可信度分层：显式带“评级”锚点的句式最可靠，软句式（建议/裸评级/兜底）次之。
+# 注意：分层优先级必须高于公司简称加分，否则会出现“积极推荐”这类软句式
+# 因靠近公司名而压过正文中明确写的“维持‘买入’评级”的情况（曾导致误判）。
+METHOD_PRIORITY = {
+    "至-句式": 60,        # 下调评级至X / 评级由买入下调为持有 —— 最明确
+    "锚点前句式": 50,      # 维持“买入”评级 —— 最常见最可靠
+    # 锚点后必须低于锚点前：“给予‘买入’评级，继续强烈推荐”里，评级是买入，
+    # “，继续强烈推荐”只是分析师表热情的新分句，不能当评级（曾导致误判）
+    "锚点后句式": 45,      # 投资评级：增持
+    "截断评级句式": 44,    # 维持“谨慎推荐”评[被截断]
+    "加入名单句式": 40,    # 加入买入名单
+    "建议句式": 30,        # 建议买入
+    "兜底句式": 25,        # 维持推荐。
+    "裸评级句式": 20,      # ……，强烈推荐。
+}
+
+
+def _market_preference(ev: str, rating_len: int) -> int:
+    """A/H 股双评级时偏向 A 股（本数据集为 A 股研报，stkcd 是 A 股代码）。
+
+    证据串以评级词为中心：前 25 字 + 评级词 + 后 12 字。取**离评级词最近**的
+    市场标记判定归属——不能简单地“窗口里有A股就加分”，因为
+    “维持对A 股买入评级和H 股持有评级”里两个候选的窗口都含 A/H 股。
+    """
+    pre, post = ev[:25], ev[25 + rating_len:25 + rating_len + 12]
+    best = None  # (距评级词的距离, 'A'/'B'/'H')
+    for m in re.finditer(r"([ABH])\s*股", pre):       # 往前找，越靠右越近
+        d = len(pre) - m.end()
+        if best is None or d < best[0]:
+            best = (d, m.group(1))
+    for m in re.finditer(r"([ABH])\s*股", post):      # 往后找，越靠左越近
+        if best is None or m.start() < best[0]:
+            best = (m.start(), m.group(1))
+    if best is None:
+        return 0
+    return 8 if best[1] == "A" else -8
+
+
 def pick_best(cands):
-    """打分选最优候选：动作 +30，至-句式 +20，公司简称 +40，位置靠后 + pos/1000。"""
+    """打分选最优候选：句式可信度 + 动作词 +10 + 公司简称邻近 +15 + A股偏好 ±8 + 位置靠后。"""
     if not cands:
         return None
     best = max(
         cands,
-        key=lambda c: (30 if c[1] else 0) + (20 if c[3] == "至-句式" else 0) + (40 if c[5] else 0) + c[2] / 1000,
+        key=lambda c: METHOD_PRIORITY.get(c[3], 10) + (10 if c[1] else 0) + (15 if c[5] else 0)
+        + _market_preference(c[4], len(c[0])) + c[2] / 1000,
     )
     return best
 
