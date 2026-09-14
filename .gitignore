@@ -1,0 +1,19 @@
+# 原始数据与需求文档：不纳入版本控制（体积大 / 可能涉及数据版权）
+综合分析结果.xlsx
+需要对研报文本进行的进一步分析.docx
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# 编辑器 / 系统
+.DS_Store
+.idea/
+.vscode/
+*.swp
