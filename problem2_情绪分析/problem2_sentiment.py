@@ -13,8 +13,9 @@
   2. 否定调整——“不理想”“未实现”等否定式会把极性翻过来。
      语料中“否定词+正面词典词”共 3132 次、覆盖 13.8% 的研报，
      不做处理会把“不理想”记成正向；
-  3. 正文口径——剔除结尾的例行“风险提示”段。语料中“风险”二字的出现
+  3. 正文口径——剔除例行的“风险提示”段。语料中“风险”二字的出现
      有 93.3% 落在该段内（15823/16964 次），是强制披露而非分析师观点。
+     按 <?> 分段删除，不从头截断——风险段并非总在末尾（见 remove_risk_section）。
 
 三套口径都剔除了落在“公司简称出现位置”内的命中（如“沧州明珠”的“明珠”），
 详见 _count。词典中的正负重叠词（21 个）也已剔除。
@@ -188,24 +189,51 @@ def _ratio(p, n):
     return round(p / tot, 4) if tot else None
 
 
-# 研报结尾的例行风险披露段。语料中“风险”二字的出现有 93.3% 落在这一段内
+# 研报的例行风险披露段。语料中“风险”二字的出现有 93.3% 落在这一段内
 # （15,823/16,964 次），是强制性披露而非分析师观点，会系统性拉低负面净值。
 RISK_SECTION = re.compile(r"(风险提示|风险因素|投资风险|风险分析|主要风险|风险及对策|风险揭示)")
+SECTION_SEP = "<?>"          # 源数据里的段落分隔符
 
 
-def score_text(text: str, pos_set, neg_set, company: str = ""):
-    """返回该文本的情绪指标 dict（三套口径，见 README）。"""
-    tokens = tokenize(text)
+def remove_risk_section(raw_text: str) -> str:
+    """按段落删除“风险提示”所在的那一段，返回剔除后的原文。
+
+    注意不能简单地“从头截断到风险提示处”：风险段并不总在末尾。
+    实测 10,113 篇可定位风险段的研报中，有 581 篇（5.7%）风险段位于 50%~80% 处、
+    76 篇（0.8%）位于 50% 之前——它们后面还有真正的正文
+    （如双鹭药业的风险段在 65% 处，其后紧跟“下半年增速有望加快，维持‘推荐’评级…”）。
+    故按 <?> 分段，只删掉含风险标题的那一段，保留其余各段。
+    """
+    if RISK_SECTION.search(raw_text) is None:
+        return raw_text
+    kept, removed = [], False
+    for seg in raw_text.split(SECTION_SEP):
+        if not removed:
+            m = RISK_SECTION.search(seg)
+            if m:
+                # 标题之前若还有正文，保留；标题及其后的风险条目丢弃
+                if seg[:m.start()].strip():
+                    kept.append(seg[:m.start()])
+                removed = True
+                continue
+        kept.append(seg)
+    return SECTION_SEP.join(kept)
+
+
+def score_text(raw_text: str, pos_set, neg_set, company: str = ""):
+    """返回该文本的情绪指标 dict（三套口径，见 README）。参数为**未清洗**的原文。"""
+    full = clean_text(raw_text)
+    tokens = tokenize(full)
     n_tokens = len(tokens)
-    blocked = company_spans(text, company)
-    rp, rn, ap, an, n_flip, terms = _count(tokens, pos_set, neg_set, blocked)
+    rp, rn, ap, an, n_flip, terms = _count(
+        tokens, pos_set, neg_set, company_spans(full, company))
 
-    # 正文口径：截掉风险提示段后重算
-    m = RISK_SECTION.search(text)
-    if m and m.start() > 0:
-        # 公司简称区间相对全文，正文为其前缀，故区间可直接沿用
-        body_tokens = tokenize(text[:m.start()])
-        bp, bn, _, _, _, _ = _count(body_tokens, pos_set, neg_set, blocked)
+    # 正文口径：剔除风险提示段后重算（正文单独清洗，故公司名区间需按正文重算）
+    body = clean_text(remove_risk_section(raw_text))
+    if body != full:
+        body_tokens = tokenize(body)
+        bp, bn, _, _, _, _ = _count(
+            body_tokens, pos_set, neg_set, company_spans(body, company))
     else:
         bp, bn = rp, rn
 
@@ -307,7 +335,7 @@ def main():
         n += 1
         fordate, seq, stkcd, company, broker = row[0], row[1], row[2], row[3], row[4]
         text, wordcount = row[5] or "", row[7]
-        m = score_text(clean_text(text), pos_set, neg_set, company or "")
+        m = score_text(text, pos_set, neg_set, company or "")
         pol = polarity(m["情绪比例"])
         pol_adj = polarity(m["情绪比例_否定调整"])
         pol_body = polarity(m["情绪比例_正文"])
