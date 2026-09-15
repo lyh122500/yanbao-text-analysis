@@ -23,10 +23,8 @@
 输出：output/问题2_情绪分析结果.xlsx
 """
 
-import os
 import re
-import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 import jieba
@@ -96,13 +94,13 @@ def register_to_jieba(words):
 
 
 # ---------------------------------------------------------------------------
-# 文本清洗（与问题1保持一致的归一化规则）
+# 文本清洗
 # ---------------------------------------------------------------------------
 def clean_text(text: str) -> str:
-    """清洗：破折号归一化、去隐形字符、去段落分隔符 <?>。
+    """清洗：连接符与引号归一化、去隐形字符、去段落分隔符 <?>。
 
-    与 problem1_rating.py 的 _clean 采用同一套归一化，保证两个问题的
-    文本口径一致（便于问题2的情绪与问题1的评级做交叉校验）。
+    归一化项均依据语料实际字符分布确定（见问题2 README“文本清洗”一节）：
+    连接符有 U+00AD 软连字符等 5 种写法，引号除 “” 外还有 ‚‛’‘‟「」 约 300 处。
     """
     text = re.sub(r"[\xad‐‑‒–—−－]", "-", text)
     for ch in ["﻿", "​", "‌", "‍", "\xa0"]:
@@ -274,26 +272,6 @@ def polarity(ratio):
 
 
 # ---------------------------------------------------------------------------
-# 与问题1结果对齐（用于交叉校验：买入评级的研报是否真的更正面）
-# ---------------------------------------------------------------------------
-PROBLEM1_XLSX = (PROJECT_ROOT / "problem1_评级提取" / "output"
-                 / "问题1_评级提取结果.xlsx")
-
-
-def load_problem1_ratings():
-    """按**行号**读取问题1的标准化评级。
-
-    注意：源数据的“序号”列不唯一（17,712 行只有 1,496 个不同序号），
-    不能作主键，因此这里按行序对齐——问题1输出与本脚本都保持源数据行序。
-    """
-    if not PROBLEM1_XLSX.exists():
-        print("  提示：未找到问题1结果，评级列留空（不影响情绪指标）")
-        return []
-    ws = openpyxl.load_workbook(PROBLEM1_XLSX, read_only=True).active
-    return [r[7] or "" for r in ws.iter_rows(min_row=2, values_only=True)]
-
-
-# ---------------------------------------------------------------------------
 # 主流程
 # ---------------------------------------------------------------------------
 def main():
@@ -322,20 +300,18 @@ def main():
         "正面命中词", "负面命中词",
     ]
     out_ws.append(["fordate", "序号", "stkcd", "公司简称", "证券公司",
-                   "评级_标准化", "研报字数"] + metric_cols)
-
-    ratings = load_problem1_ratings()
+                   "研报字数"] + metric_cols)
 
     dist_raw, dist_adj, dist_body = Counter(), Counter(), Counter()
     tot_pos, tot_neg, tot_flip = 0, 0, 0
-    # 评级 × 情绪极性 交叉表（用净值均值的差来检验区分度）
-    crosstab = defaultdict(lambda: {"n": 0, "net": 0, "net_adj": 0, "net_body": 0})
+    results = []          # 仅用于末尾的自洽性检查
     n = 0
     for row in ws.iter_rows(min_row=2, values_only=True):
         n += 1
         fordate, seq, stkcd, company, broker = row[0], row[1], row[2], row[3], row[4]
         text, wordcount = row[5] or "", row[7]
         m = score_text(text, pos_set, neg_set, company or "")
+        results.append(m)
         pol = polarity(m["情绪比例"])
         pol_adj = polarity(m["情绪比例_否定调整"])
         pol_body = polarity(m["情绪比例_正文"])
@@ -345,14 +321,7 @@ def main():
         tot_pos += m["正面词数"]
         tot_neg += m["负面词数"]
         tot_flip += m["否定翻转词数"]
-        rating = ratings[n - 1] if n - 1 < len(ratings) else ""
-        if rating:
-            cell = crosstab[rating]
-            cell["n"] += 1
-            cell["net"] += m["情绪净值"]
-            cell["net_adj"] += m["情绪净值_否定调整"]
-            cell["net_body"] += m["情绪净值_正文"]
-        out_ws.append([fordate, seq, stkcd, company, broker, rating, wordcount]
+        out_ws.append([fordate, seq, stkcd, company, broker, wordcount]
                       + [m[c] for c in metric_cols[:16]] + [pol, pol_adj, pol_body]
                       + [m["正面命中词"], m["负面命中词"]])
         if n % 5000 == 0:
@@ -376,16 +345,19 @@ def main():
     for k, v in dist_body.most_common():
         print(f"  {k}: {v} ({v / n * 100:.2f}%)")
 
-    if crosstab:
-        order = ["买入", "推荐", "增持", "中性", "持有", "减持", "卖出", "回避", "观望"]
-        print("\n交叉校验：各评级下的平均情绪净值（越高表示文本越正面）")
-        print(f"  {'评级':<6}{'样本数':>8}{'均值_原始':>11}{'均值_否定调整':>13}{'均值_正文':>11}")
-        for r in order:
-            if r not in crosstab:
-                continue
-            c = crosstab[r]
-            print(f"  {r:<6}{c['n']:>8}{c['net'] / c['n']:>11.2f}"
-                  f"{c['net_adj'] / c['n']:>13.2f}{c['net_body'] / c['n']:>11.2f}")
+    # 自洽性检查（不依赖其他问题的结果）：
+    # 词典本身负面词更多（正 3173 : 负 5600），若情绪词随机出现，比例应为
+    # 3173/(3173+5600)=0.362。实测比例远高于此，说明研报用词系统性偏正面，
+    # 而非随机分布——这是指标确有区分力的一个侧面证据。
+    ratios = sorted(r["情绪比例"] for r in results if r["情绪比例"] is not None)
+    if ratios:
+        base = len(pos_set) / (len(pos_set) + len(neg_set))
+        print(f"\n情绪比例分位数（n={len(ratios)}）：")
+        for p in [1, 5, 25, 50, 75, 95, 99]:
+            print(f"  P{p:>2}: {ratios[int(len(ratios) * p / 100)]:.3f}")
+        print(f"  词典随机基线 {base:.3f}"
+              f"（正 {len(pos_set)} : 负 {len(neg_set)}）——"
+              f"实测中位数是基线的 {ratios[len(ratios) // 2] / base:.1f} 倍")
 
 
 if __name__ == "__main__":
