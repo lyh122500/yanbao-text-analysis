@@ -2,6 +2,10 @@
 综合分析结果.xlsx
 需要对研报文本进行的进一步分析.docx
 
+# 第三方情感词典：有独立的知识产权与引用要求，不再分发，
+# 由使用者按 problem2_情绪分析/README.md 的指引自行下载
+problem2_情绪分析/dict/
+
 # Python
 __pycache__/
 *.py[cod]
