@@ -21,3 +21,8 @@ env/
 .idea/
 .vscode/
 *.swp
+
+# 问题3第三方字表保留本地，仓库仅提供放置说明
+problem3_复杂性可读性/dict/*.txt
+# 与Excel重复的大型机器明细可由脚本重新生成
+problem3_复杂性可读性/output/结果明细.json

@@ -1,0 +1,15 @@
+{
+  "method_version": "1.0.0",
+  "input_sha256": "fbcfa74d5fb8945d3ab481c3977a2628ff4cc0aef005bade21a033e74b841895",
+  "script_sha256": "3215cf211aac046e214547070bece0528fdd095f051fab6140f78965c6d4b9e3",
+  "dictionary_sha256": {
+    "现代汉语常用字表_一级常用字2500.txt": "f5b01057b18877d285a7f0d172fc143f809272bb3d0a22167e7ba7bab4bbfcf0",
+    "现代汉语常用字表_次常用字1000.txt": "9ca99a7e7a23774f05a91a9235f404b41ea2282bffd84733337d3b1118169a8e"
+  },
+  "python": "3.9.13",
+  "openpyxl": "3.1.5",
+  "reference_sha256": "7ac5dc7ba411d7a3840bf838ad677094817eb1b39f35442abb409307bf242ad0",
+  "results_sha256": "f076ea10234c374dbced48c79f42b5e4684e32e0ebeb0ea30c1e55e3928584e1",
+  "reference_mode": "reuse",
+  "interpretation": "未经读者理解测试验证的相对代理指标，非教育年限/文献原式"
+}
