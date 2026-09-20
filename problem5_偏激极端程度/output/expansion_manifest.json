@@ -1,15 +1,15 @@
 {
   "HMM": false,
-  "analyzer_sha256": "cc2f11899956dfc35ceb03f7fdada22bb3204c4332dfe41c2dffe7bc98418fb3",
-  "candidate_sha256": "d2d91aad295476434126e5785b0cdeabf8c036dd563608d5c61b24fda6a4e253",
+  "analyzer_sha256": "d6d6cbd799523c48229f284de122268590fa81d535978fe588129323ad1b0cec",
+  "candidate_sha256": "75b986fcfa6365d37e688cdc71f601258f9f3c1037df1e3a16f5b96e9a4427a8",
   "candidates": 210,
   "contexts": 3000,
-  "cooccurrence_nonzero": 2551407,
+  "cooccurrence_nonzero": 2551351,
   "duplicate_documents_skipped": 50,
   "input_sha256": "fbcfa74d5fb8945d3ab481c3977a2628ff4cc0aef005bade21a033e74b841895",
   "jieba": "0.42.1",
   "jieba_dict_sha256": "7197c3211ddd98962b036cdf40324d1ea2bfaa12bd028e68faa70111a88e12a8",
-  "lexicon_sha256": "4c6fa15e380c448a2be68115dbddeb6055555ceb7fda2abc2a1a642c3cd18ca2",
+  "lexicon_sha256": "09b0142c1064ff4b1298a62949866f3a33f2a0a225598d03fe9567cbc9d5ea98",
   "max_contexts": 3000,
   "max_vocabulary": 10000,
   "method": "PPMI上下文向量余弦相似度；不训练随机神经词向量",
@@ -110,9 +110,16 @@
       "预计"
     ],
     "hyperbole": [
+      "举足轻重",
       "前所未有",
+      "历史性",
       "无可比拟",
-      "颠覆性"
+      "独具",
+      "空前",
+      "绝佳",
+      "革命性",
+      "颠覆性",
+      "首屈一指"
     ],
     "intensity": [
       "十分",
@@ -164,6 +171,6 @@
       "最高"
     ]
   },
-  "vocabulary": 10051,
+  "vocabulary": 10058,
   "window": 3
 }

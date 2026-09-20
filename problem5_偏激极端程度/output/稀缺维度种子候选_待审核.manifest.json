@@ -9,6 +9,7 @@
     "绝对化": 3
   },
   "candidates": 18,
+  "decisions_sha256": "2c6cb316ea4bc933c939d13a0c26751decb31b6c2406f4687abfa672aa21734e",
   "existing_lexicon_excluded": true,
   "input_sha256": "fbcfa74d5fb8945d3ab481c3977a2628ff4cc0aef005bade21a033e74b841895",
   "judges": [
@@ -19,6 +20,6 @@
   "judgments_sha256": "990efcbe8db54fcc048c80a58b79df700928d1eadd60ab63ed4de2e4dceceb36",
   "method": "语料候选（逐种子PPMI）+ 三方独立判断，≥2 方一致才入选",
   "pool_sha256": "1eeb6161354b00dd5e2c0008375a268ae5ebb819a5bb27dea70f8edb95dc115c",
-  "script_sha256": "cfb07fa263aea53bbca5b622bd4812359ae16dcd5f89c2be9aaf3f481dd1bf96",
+  "script_sha256": "ddc4e85407a33916d0a76bebdc5e1ceb6d3a2eb361e435f7631ef1b540ce8b40",
   "status": "未经人工审核，不参与正式计分"
 }
