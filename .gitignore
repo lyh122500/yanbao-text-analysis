@@ -26,3 +26,9 @@ env/
 problem3_复杂性可读性/dict/*.txt
 # 与Excel重复的大型机器明细可由脚本重新生成
 problem3_复杂性可读性/output/结果明细.json
+
+# 问题5原文核验材料与可再生成的大型明细保留本地
+problem5_偏激极端程度/output*/措辞证据.jsonl
+problem5_偏激极端程度/output*/措辞核验样本.csv
+problem5_偏激极端程度/output*/词典扩展候选_待审核.csv
+problem5_偏激极端程度/output*/逐篇指标.json

@@ -1,0 +1,16 @@
+{
+  "aggregation_and_excel_values": true,
+  "all_sentence_shares_in_range": true,
+  "documents": 17712,
+  "events": 116924,
+  "manifest_sha256": "4ed37d9ad58c81f44292b86dbb14fa72d5bc505e0abd5b8cb09e694638646c4d",
+  "replay_hash_matches": {
+    "summary.json": true,
+    "措辞核验样本.csv": true,
+    "措辞证据.jsonl": true,
+    "词典扩展候选_待审核.csv": true,
+    "逐篇指标.json": true
+  },
+  "source_offsets_exact": true,
+  "validation_scope": "软件一致性，不是人工分类准确率"
+}

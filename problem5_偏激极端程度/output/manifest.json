@@ -1,0 +1,12 @@
+{
+  "evidence_sha256": "02fdd33ff7270badac3972f2207d2319ae2a4be6619a8c034827ea4ab254b307",
+  "input_sha256": "fbcfa74d5fb8945d3ab481c3977a2628ff4cc0aef005bade21a033e74b841895",
+  "lexicon_sha256": "4c6fa15e380c448a2be68115dbddeb6055555ceb7fda2abc2a1a642c3cd18ca2",
+  "metrics_sha256": "2e37baf03a92502a00edd840c35cf1ea0c58aa465442aa987c0eac2c76fc3837",
+  "offsets": "Python Unicode codepoint, 0-based half-open",
+  "openpyxl": "3.1.5",
+  "python": "3.9.13",
+  "sampling": "SHA256(source_row:start)最小30个/层；分层非代表总体样本",
+  "script_sha256": "cc2f11899956dfc35ceb03f7fdada22bb3204c4332dfe41c2dffe7bc98418fb3",
+  "version": "1.0.0"
+}
