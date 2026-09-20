@@ -118,8 +118,13 @@ class Analyzer:
                     excluded = "金融术语或事实身份搭配"
                 if term.startswith("极") and a and text[a-1] in "积南北":
                     excluded = excluded or "跨词误匹配"
+                # “绝对”只有在紧邻断言或地位断言时才计入：前者如“绝对不会/绝对安全”，
+                # 后者如“绝对龙头/绝对优势/绝对领先”——它们与词表中“无一例外”“绝无”
+                # 同属全有全无的地位断言。泛指程度而无断言的用法（绝对准确、绝对比重）
+                # 仍标记待核。纯数量与估值搭配“绝对值/绝对额/绝对估值”由 exclude_patterns 排除。
                 if term == "绝对" and not excluded and not re.match(
-                        r"不会|不可能|不能|不是|不应|没有|会|能|是|确定|肯定|正确|错误|安全|可靠|值得|看好|低估|高估", text[b:]):
+                        r"不会|不可能|不能|不是|不应|没有|会|能|是|确定|肯定|正确|错误|安全|可靠|值得|看好|低估|高估"
+                        r"|龙头|优势|领先|竞争|领军|主导|主力|保障|垄断|领导|市场", text[b:]):
                     excluded = "绝对的歧义用法_待核"
                 before = clause[:m.start()]
                 negated = bool(NEGATION.search(before))
