@@ -2,8 +2,8 @@
   "aggregation_and_excel_values": true,
   "all_sentence_shares_in_range": true,
   "documents": 17712,
-  "events": 116924,
-  "manifest_sha256": "9e3bd06e3af84379a3ef16bcc79bc19c8696c12d194a05a8540d09bc1d1fcf96",
+  "events": 117309,
+  "manifest_sha256": "c296cb0b24cdbde44bb5e74298408213cfcb59a8a7c0d1ca5632b87511da6e28",
   "replay_hash_matches": {},
   "source_offsets_exact": true,
   "validation_scope": "软件一致性，不是人工分类准确率"

@@ -1,9 +1,9 @@
 {
   "category_counts": {
-    "absolute": 336,
+    "absolute": 371,
     "certainty": 1213,
     "hedge": 77045,
-    "hyperbole": 123,
+    "hyperbole": 473,
     "intensity": 5014,
     "magnitude": 20976,
     "superlative": 9226
@@ -17,8 +17,8 @@
     "跨词误匹配": 16,
     "金融术语或事实身份搭配": 634
   },
-  "reports_with_extreme": 404,
-  "reports_with_strict_extreme": 381,
+  "reports_with_extreme": 714,
+  "reports_with_strict_extreme": 673,
   "review_samples": 422,
   "status": {
     "占位文本": 32,
