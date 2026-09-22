@@ -10,7 +10,8 @@
   3. 参照词比率：确定性占比 = 确定 / (确定 + 模糊)；程度加强净额 = (高程度 − 弱化)
   4. 偏激指数：5 个维度得分的语料百分位等权平均
 
-两套口径：主口径（active）与保守口径（strict，再排除带语境标记的命中）。
+单一口径：只排除可确定的误匹配（公司名/券商名、免责声明句、评级档位名、
+短词消歧、前置否定），其余全部计入。
 
 输出：output/任务5新_偏激极端程度结果.xlsx、措辞证据.jsonl、逐篇指标.json、
       summary.json、manifest.json
@@ -39,8 +40,6 @@ HAN = re.compile(r"[㐀-䶿一-鿿]")
 SENTENCE_END = re.compile(r"<\?>|[。！？!?]+")
 BOUNDARY = re.compile(r"<\?>|[。！？!?；;，,：:]+")
 NEGATION = re.compile(r"(?:并不是|并非|并不|不是|没有|未能|未必|未|不|无|没)(?:那么|如此|很|太|十分|非常)?$")
-CONDITION = re.compile(r"如果|假如|倘若|一旦|若(?!干)|假设|除非|只要|只有")
-ATTRIBUTION = re.compile(r"(?:公司|管理层|董事长|总经理|公告|媒体|市场|业内|客户).{0,8}(?:表示|声称|宣称|称|认为|预计|预期)")
 DISCLAIMER = re.compile(r"不构成.{0,12}(?:投资建议|要约)|不保证.{0,15}(?:准确|完整)|(?:本报告|本研报).{0,15}(?:仅供参考|版权|免责声明)")
 # 评级档位名整体掩码：词表里的「强烈」「谨慎」在评级名中是档位而非措辞。
 # 实测「强烈」2,595 次中 1,969 次（75.9%）、「谨慎」2,407 次中 1,667 次（69.3%）
@@ -118,8 +117,7 @@ class Scorer:
         blank = {"status": "占位文本" if placeholder else "空白或无汉字", "han": 0, "sentences": 0,
                  "counts": {k: 0 for k, _ in DIMS}, "ref_counts": {k: 0 for k, _ in DIMS},
                  "raw_counts": {k: 0 for k, _ in DIMS},
-                 "sub_counts": {}, "excluded": 0, "context": 0,
-                 "strict_counts": {k: 0 for k, _ in DIMS}, "binary": 0}
+                 "sub_counts": {}, "excluded": 0, "binary": 0}
         if not text or placeholder or not HAN.search(text):
             return blank, []
 
@@ -142,15 +140,7 @@ class Scorer:
             clause = text[ca:cb]
             while sidx + 1 < len(sentences) and ca >= sentences[sidx][1]:
                 sidx += 1
-            sa, sb = sentences[sidx]
-            sent = text[sa:sb]
             matches = list(self.pattern.finditer(clause))
-            conditional = bool(CONDITION.search(clause))
-            attribution = bool(ATTRIBUTION.search(sent))
-            question = sb < len(text) and text[sb] in "？?"
-            hedge_here = any(self.lookup[m.group()] == "certainty"
-                             and self.dims["certainty"][m.group()]["subclass"].startswith("模糊")
-                             for m in matches)
             for m in matches:
                 a, b = ca + m.start(), ca + m.end()
                 term, cat = m.group(), self.lookup[m.group()]
@@ -166,31 +156,19 @@ class Scorer:
                         excluded = why
                 if not excluded and NEGATION.search(clause[:m.start()]):
                     excluded = "前置否定"
-                flags = []
-                if cat != "certainty" and hedge_here:
-                    flags.append("同分句含模糊词")
-                if conditional:
-                    flags.append("条件表达")
-                if attribution:
-                    flags.append("疑似转述")
-                if question:
-                    flags.append("疑问句")
                 events.append({
                     "term": term, "category": cat,
                     "subclass": self.dims[cat][term]["subclass"],
                     "role": self.dims[cat][term]["role"],
                     "start": pos[a], "end": pos[b-1] + 1, "raw_match": raw[pos[a]:pos[b-1]+1],
                     "sentence_id": sidx + 1, "clause": raw[pos[ca]:pos[cb-1]+1],
-                    "excluded_reason": excluded, "context_flags": flags,
-                    "active": not excluded, "strict": not excluded and not flags})
+                    "excluded_reason": excluded, "active": not excluded})
 
         # 偏激词进分子；参照词（模糊词/弱化词）是分母与对照，不能混入维度计数。
         # 词表的《使用说明》把 role 定义为「偏激词=计入分子，参照词=用于相对指标分母或对照」。
         counts = Counter(e["category"] for e in events if e["active"] and e["role"] == "偏激词")
         ref_counts = Counter(e["category"] for e in events if e["active"] and e["role"] == "参照词")
         raw_counts = Counter(e["category"] for e in events)
-        strict = Counter(e["category"] for e in events
-                         if e["strict"] and e["role"] == "偏激词")
         subs = Counter()
         for e in events:
             if e["active"]:
@@ -201,10 +179,8 @@ class Scorer:
             "counts": {k: counts[k] for k, _ in DIMS},
             "ref_counts": {k: ref_counts[k] for k, _ in DIMS},
             "raw_counts": {k: raw_counts[k] for k, _ in DIMS},
-            "strict_counts": {k: strict[k] for k, _ in DIMS},
             "sub_counts": {f"{k}|{s}": v for (k, s), v in subs.items()},
             "excluded": sum(not e["active"] for e in events),
-            "context": sum(e["active"] and bool(e["context_flags"]) for e in events),
             "binary": 1 if counts[BINARY_DIM] > 0 else 0,
         }
         return result, events

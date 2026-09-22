@@ -120,6 +120,15 @@ class TestScoring(unittest.TestCase):
             self.assertEqual(sum(res["counts"].values()), 0)
             self.assertIn(res["status"], ("占位文本", "空白或无汉字"))
 
+    def test_单一口径_没有保守口径的残留(self):
+        """保守口径与四个语境标记已整套移除（见 README 第九节），不该再出现。"""
+        res, ev = self.score("公司业绩必将大幅增长，若需求恢复则可能超预期。")
+        self.assertNotIn("strict_counts", res)
+        self.assertNotIn("context", res)
+        for e in ev:
+            self.assertNotIn("context_flags", e)
+            self.assertNotIn("strict", e)
+
     def test_二元指标只看绝对化(self):
         res, _ = self.score("公司业绩必将大幅增长，确定性极高。")
         self.assertEqual(res["binary"], res["counts"]["absolute"] > 0)
