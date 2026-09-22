@@ -1,0 +1,14 @@
+{
+  "build_script_sha256": "8fcb04021b94719ba9636a75413b724094b2d95819bbb7eb1411803167ab96b6",
+  "calibration_sha256": "625e1b78ee404ab17dd6bacca895c2857c425c63d5a1e5ccb6e207ddf711dbf8",
+  "disambig_sha256": "752eae7c126505b4edf7bfee4ee7598e6b6a90ed583c2eabc469cbf76d101baf",
+  "evidence_sha256": "32ad03f355eab2e56791d8a5737d066708dd3157cae36817c5bd61591bc4608e",
+  "input_sha256": "fbcfa74d5fb8945d3ab481c3977a2628ff4cc0aef005bade21a033e74b841895",
+  "lexicon_sha256": "bbad14199261482c19c65a5d56702bdd646db8f342168abac016070752692f36",
+  "metrics_sha256": "1367dcbfaa4b7cc6377a50d0041c02524971d2371938b6cd93da2eead4d2f837",
+  "offsets": "Python Unicode 码位，0 起、左闭右开",
+  "openpyxl": "3.1.5",
+  "python": "3.9.13",
+  "script_sha256": "c81a920fb36226018fdae61c06a418620274456550a29f261cba4093ccc455d3",
+  "version": "1.0.0"
+}

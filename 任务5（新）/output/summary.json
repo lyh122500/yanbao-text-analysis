@@ -1,0 +1,25 @@
+{
+  "category_counts": {
+    "absolute": 29896,
+    "certainty": 5130,
+    "emotion": 3898,
+    "hyperbole": 919,
+    "intensity": 36419
+  },
+  "documents": 17712,
+  "reference_word_counts": {
+    "absolute": 0,
+    "certainty": 105111,
+    "emotion": 0,
+    "hyperbole": 0,
+    "intensity": 8173
+  },
+  "reports_with_absolute": 11424,
+  "status": {
+    "占位文本": 32,
+    "可计算": 17623,
+    "短文本_谨慎比较": 45,
+    "空白或无汉字": 12
+  },
+  "validation": "程序一致性已验证；无人工效度验证，不报告准确率"
+}

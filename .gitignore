@@ -32,3 +32,8 @@ problem5_偏激极端程度/output*/措辞证据.jsonl
 problem5_偏激极端程度/output*/措辞核验样本.csv
 problem5_偏激极端程度/output*/词典扩展候选_待审核.csv
 problem5_偏激极端程度/output*/逐篇指标.json
+
+# 任务5（新）措辞证据含原文分句（约 80MB），逐篇指标与 Excel 内容重复（约 17MB），
+# 两者都可由 score_extremity.py 重建，与问题3/问题5 的处置一致
+任务5（新）/output*/措辞证据.jsonl
+任务5（新）/output*/逐篇指标.json
