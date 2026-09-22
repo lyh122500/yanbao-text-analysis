@@ -163,5 +163,89 @@ class TestOutputs(unittest.TestCase):
             self.assertEqual(len(self.manifest[k]), 64, k)
 
 
+class TestExpansion(unittest.TestCase):
+    """PPMI 扩展阶段（expand_scarce_seeds.py → merge_seed_candidates.py）。
+
+    这一阶段**不参与正式计分**，所以除了自身的一致性，还要断言它没有
+    反过来改动词表——否则计分结果会被悄悄改掉。
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.pool_path = HERE / "output" / "稀缺维度候选池.json"
+        cls.rows_path = HERE / "output" / "稀缺维度候选池.rows.json"
+        cls.csv_path = HERE / "output" / "稀缺维度种子候选_待审核.csv"
+        if not (cls.pool_path.exists() and cls.csv_path.exists()):
+            raise unittest.SkipTest("尚未运行 PPMI 扩展脚本")
+        cls.pool = json.loads(cls.pool_path.read_text(encoding="utf-8"))
+        cls.rows = json.loads(cls.rows_path.read_text(encoding="utf-8"))
+        cls.by_word = {r["候选词"]: r for r in cls.rows}
+        with cls.csv_path.open(encoding="utf-8-sig") as f:
+            import csv
+            cls.review = list(csv.DictReader(f))
+
+    def test_目标维度只是夸张修辞与情绪极端(self):
+        self.assertEqual(set(self.pool["target_categories"]), {"夸张修辞度", "情绪极端度"})
+
+    def test_低频种子被剔除且不参与扩展(self):
+        dropped = set(self.pool["seeds_dropped_low_freq"])
+        self.assertTrue(dropped, "应有低频种子被剔除")
+        self.assertEqual(set(dropped) & set(self.pool["seeds_used"]), set(),
+                         "被剔除的种子不应出现在 seeds_used 中")
+        for w, n in self.pool["seeds_dropped_low_freq"].items():
+            self.assertLess(n, self.pool["seed_min_count"], f"{w} 频次并未低于阈值")
+
+    def test_复现所需的依赖与分词词典已锁定(self):
+        for k in ("jieba", "numpy", "scipy", "jieba_dict_sha256", "lexicon_sha256"):
+            self.assertTrue(self.pool.get(k), f"候选池缺 {k}，无法复现")
+
+    def test_候选全部可溯源到种子(self):
+        for w, r in self.by_word.items():
+            self.assertTrue(r["来源种子"], f"{w} 说不出由哪个种子扩出")
+            self.assertTrue(0 < r["最高相似度"] <= 1, w)
+
+    def test_待审核候选的来源可回查种子相似度(self):
+        import re
+        seeds_used = self.pool["seeds_used"]
+        for r in self.review:
+            hit = False
+            for pair in r["来源种子"].split("、"):
+                m = re.match(r"(.+)\(([\d.]+)\)", pair)
+                for t in seeds_used.get(m.group(1), []):
+                    if t[0] == r["候选词"] and abs(t[1] - float(m.group(2))) < 5e-4:
+                        hit = True
+            self.assertTrue(hit, f'{r["候选词"]} 的来源无法回查')
+
+    def test_只有两方以上一致才进入待审核(self):
+        for r in self.review:
+            self.assertGreaterEqual(int(r["独立判断一致度"].split("/")[0]), 2, r["候选词"])
+
+    def test_候选子类合法且情绪落到具体子类(self):
+        allowed = {"夸张修辞", "极端积极", "极端消极", "条件性"}
+        subs = {r["建议子类"] for r in self.review}
+        self.assertLessEqual(subs, allowed)
+        self.assertNotIn("情绪极端", subs, "不应出现笼统的情绪维度标签")
+
+    def test_未裁定的候选不与现有词表重复(self):
+        existing = {w for d in self.spec()["dimensions"].values() for w in d["words"]}
+        decisions = (RES / "种子审核结论.json")
+        decided = set(json.loads(decisions.read_text(encoding="utf-8"))) \
+            if decisions.exists() else set()
+        for r in self.review:
+            if r["候选词"] not in decided:
+                self.assertNotIn(r["候选词"], existing, "未裁定的候选已在词表中")
+
+    def test_扩展没有改动词表(self):
+        """PPMI 只读词表；lexicon.json 必须与计分时锁定的一致。"""
+        import hashlib
+        m = json.loads((HERE / "output" / "manifest.json").read_text(encoding="utf-8"))
+        h = hashlib.sha256((RES / "lexicon.json").read_bytes()).hexdigest()
+        self.assertEqual(h, m["lexicon_sha256"], "扩展阶段改动了词表，计分结果需重跑")
+
+    @staticmethod
+    def spec():
+        return json.loads((RES / "lexicon.json").read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

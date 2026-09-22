@@ -1,0 +1,28 @@
+{
+  "agreement": {
+    "2/3": 5,
+    "3/3": 12
+  },
+  "by_subclass": {
+    "夸张修辞": 8,
+    "条件性": 4,
+    "极端消极": 2,
+    "极端积极": 3
+  },
+  "candidates": 17,
+  "decisions_sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+  "existing_lexicon_excluded": true,
+  "input_sha256": "fbcfa74d5fb8945d3ab481c3977a2628ff4cc0aef005bade21a033e74b841895",
+  "judges": [
+    "A",
+    "B",
+    "C"
+  ],
+  "judgments_sha256": "debce308e5e905bb7ece2267a50cdefb2862661cbdabafc7b292a316b65ca8ea",
+  "lexicon_sha256": "bbad14199261482c19c65a5d56702bdd646db8f342168abac016070752692f36",
+  "method": "语料候选（逐种子PPMI）+ 三方独立判断，≥2 方一致才入选",
+  "model_proposed_included": false,
+  "pool_sha256": "da98c378ad5bf6335e00d1e287a0a06151cd961068ff83f474bd4ce3bc097dc6",
+  "script_sha256": "13f94b907d3911cc2101620b9ca4cfeca604a34bc60217325c051515c768aa0b",
+  "status": "待人工审核；不参与正式计分"
+}
