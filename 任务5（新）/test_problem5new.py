@@ -235,6 +235,20 @@ class TestExpansion(unittest.TestCase):
             if r["候选词"] not in decided:
                 self.assertNotIn(r["候选词"], existing, "未裁定的候选已在词表中")
 
+    def test_审核结论与词表一致(self):
+        """裁定「收入」的词必须在词表里、且在指定子类下；裁定「否」的不得进入。"""
+        decisions = json.loads((RES / "种子审核结论.json").read_text(encoding="utf-8"))
+        words = self.spec()["dimensions"]
+        for w, d in decisions.items():
+            if d.get("是否收入词典") != "是":
+                self.assertFalse(any(w in dim["words"] for dim in words.values()),
+                                 f"{w} 裁定不收却在词表中")
+                continue
+            sub = d["审核后子类"]
+            hit = [(k, dim) for k, dim in words.items()
+                   if w in dim["words"] and dim["words"][w]["subclass"] == sub]
+            self.assertTrue(hit, f"{w} 裁定收入 {sub}，但词表中没有对应条目")
+
     def test_扩展没有改动词表(self):
         """PPMI 只读词表；lexicon.json 必须与计分时锁定的一致。"""
         import hashlib

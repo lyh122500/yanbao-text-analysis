@@ -12,7 +12,9 @@
   - 全库零命中的词保留在词表中并标注，不影响计分但会随产出记录；
   - 维度间不重复计分：同一词只归属一个维度；
   - LM 补充的确定性/模糊词按 resources/确定性词表校准.json 逐词校准
-    （109 条 drop、5 条 reclassify，每条均有语料实测依据，见该文件与 README）。
+    （109 条 drop、5 条 reclassify，每条均有语料实测依据，见该文件与 README）；
+  - 阶段一 PPMI 扩展中经人工审核「收入」的词，按 resources/种子审核结论.json
+    指定的子类并入（见 README 第六节）。
 
 输出：resources/lexicon.json
 """
@@ -86,6 +88,8 @@ def main():
     p.add_argument("--main", type=Path, default=RES / "任务5词表.xlsx")
     p.add_argument("--lm", type=Path, default=RES / "LM词表中文校准对照表.xlsx")
     p.add_argument("--calibration", type=Path, default=RES / "确定性词表校准.json")
+    p.add_argument("--decisions", type=Path, default=RES / "种子审核结论.json",
+                   help="PPMI 扩展的人工审核结论；「收入」的词按指定子类并入")
     p.add_argument("--output", type=Path, default=RES / "lexicon.json")
     args = p.parse_args()
 
@@ -94,6 +98,8 @@ def main():
     cal = json.loads(args.calibration.read_text(encoding="utf-8"))
     drop, reclass = cal["drop"], cal["reclassify"]
     role_override = cal.get("role_override", {})
+    decisions = json.loads(args.decisions.read_text(encoding="utf-8")) \
+        if args.decisions.exists() else {}
 
     # 先收集全部词条（同一词可能在多处出现），再按裁定解决归属，
     # 这样跨维度重复不会在放置阶段被静默丢弃。
@@ -112,6 +118,20 @@ def main():
         for w in words:
             lm_entries.append(("certainty", label, w, role, "LM汇总"))
     entries += lm_entries
+
+    # 阶段一 PPMI 扩展：人工审核「收入」的词，按裁定子类并入。
+    # 子类 → 维度 由主词表反查，不在代码里硬编码第二份映射。
+    sub2cat = {subclass: LABEL2KEY[label]
+               for label, subclass, *_ in main_rows if label in LABEL2KEY}
+    accepted = []
+    for word, d in decisions.items():
+        if d.get("是否收入词典") != "是":
+            continue
+        sub = d.get("审核后子类")
+        if sub not in sub2cat:
+            raise ValueError(f"审核结论里 {word} 的子类「{sub}」不在词表维度中")
+        accepted.append((sub2cat[sub], sub, word, "偏激词", "PPMI扩展+人工审核"))
+    entries += accepted
 
     # 作者裁定：「绝对」归入绝对化（覆盖其在确定性词中的归属）
     RULING = {"绝对": "absolute"}
@@ -155,6 +175,11 @@ def main():
             "说明": "本词表为项目自建中文种子表，未经独立人工效度验证；"
                     "来源标注见各词的 source 字段。",
             "裁定": ["「绝对」跨维度重复，归入绝对化，从确定性词移除"],
+            "PPMI扩展审核": {
+                "文件": "resources/种子审核结论.json",
+                "收入词数": len(accepted),
+                "收入明细": {w: sub for _, sub, w, _, _ in accepted},
+            },
             "确定性词表校准": {
                 "文件": "resources/确定性词表校准.json",
                 "依据": cal["_依据"],
@@ -180,6 +205,9 @@ def main():
     print(f"  LM 补充进确定性强度：{dict(lm_added)}")
     print(f"  确定性词表校准：移除 {n_dropped} 词、改判 {len(reclass)} 词"
           f"（依据 {args.calibration.name}）")
+    if accepted:
+        by_sub = Counter(sub for _, sub, _, _, _ in accepted)
+        print(f"  PPMI 扩展人工审核：收入 {len(accepted)} 词 {dict(by_sub)}")
     if conflicts:
         print(f"  ⚠ 跨维度重复（主词表归属优先，LM 未覆盖）：{conflicts}")
 

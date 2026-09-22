@@ -106,7 +106,7 @@ def main():
             "各判断标签": "；".join(judges_list),
             # 溯源：这条候选是怎么从语料扩出来的，可回查 PPMI 计算过程
             "来源种子": p.get("来源种子", ""), "最高相似度": p.get("最高相似度", ""),
-            "语料频数": "", "语料例句": "",
+            "语料频数": "", "PPMI词频": "", "语料例句": "",
             "是否收入词典": "", "审核后子类": "", "审核人": "", "备注": ""})
 
     for word, labs in votes.items():
@@ -136,12 +136,14 @@ def main():
         r["是否收入词典"] = d.get("是否收入词典", "")
         r["审核后子类"] = d.get("审核后子类", "")
         r["备注"] = d.get("备注", "")
-    _, examples = corpus_freq_and_examples(args.input, {r["候选词"] for r in rows})
+    freq, examples = corpus_freq_and_examples(args.input, {r["候选词"] for r in rows})
     for r in rows:
-        # 频数统一取候选池的口径（jieba token 计数、整篇去重），与 PPMI 一致。
-        # 语料扫描是子串计数、不去重，同一个词会得到略大的数（如 飞跃 76 vs 71），
-        # 同一列名给两个数会误导审核，故扫描只用于取例句。
-        r["语料频数"] = pool.get(r["候选词"], {}).get("语料频数", 0)
+        # 频数用正则子串计数，与计分器的匹配口径一致——审核的人要看的是
+        # 「这个词进词表后会被计多少次」。候选池里的语料频数是 jieba 分词后的
+        # 词频（且整篇去重），与计分口径不同（刷新 19 vs 22、明星 202 vs 214），
+        # 用它会让审核依据与实际计分对不上。两者都保留，列名写清楚。
+        r["语料频数"] = freq[r["候选词"]]
+        r["PPMI词频"] = pool.get(r["候选词"], {}).get("语料频数", 0)
         r["语料例句"] = "\n".join(examples.get(r["候选词"], [])[:2])
     order = list(DIM) + ["条件性"]
     rows.sort(key=lambda r: (order.index(r["建议子类"]) if r["建议子类"] in order else 99,
