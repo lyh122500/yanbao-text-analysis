@@ -1,0 +1,13 @@
+{
+  "outputs": {
+    "reference.joblib": "0c27a8808df66b548c93b1681c9244ef10e33160ac27a30cacd20306f17896eb",
+    "shuffle_validation.json": "c730f8b0672da8f28c18bf303e415b46a26cb46ef6f87c0dc7722e10a839959b",
+    "summary.json": "66034d22889a4f9439a4f779112b29b6b9f702b9d7b428e3674acbfb20e25d26",
+    "问题6_连贯性结果.xlsx": "d675353e0c023fd150e46f37730a90a8730367c234c17e683316ed5fd3a256fb"
+  },
+  "program_version": "1.0.0",
+  "reference": "/Users/yonghaoliu/code_project/research/综合分析/problem6_连贯性/output/reference.joblib",
+  "reference_sha256": "0c27a8808df66b548c93b1681c9244ef10e33160ac27a30cacd20306f17896eb",
+  "source": "/Users/yonghaoliu/code_project/research/综合分析/综合分析结果.xlsx",
+  "source_sha256": "fbcfa74d5fb8945d3ab481c3977a2628ff4cc0aef005bade21a033e74b841895"
+}

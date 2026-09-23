@@ -1,0 +1,25 @@
+{
+  "all_passed": true,
+  "checks": {
+    "frozen_reference_summary_exact": true,
+    "frozen_reference_workbook_exact": true,
+    "noneligible_score_blank": true,
+    "output_hashes": true,
+    "reference_hash": true,
+    "required_columns": true,
+    "row_count_17712": true,
+    "score_range": true,
+    "source_hash": true,
+    "source_row_alignment": true,
+    "status_total": true,
+    "transition_count": true
+  },
+  "columns": 29,
+  "replay_performed": true,
+  "rows": 17712,
+  "status_counts": {
+    "可比较": 17569,
+    "短文本_不进入参考分布": 99,
+    "空白或占位文本": 44
+  }
+}
